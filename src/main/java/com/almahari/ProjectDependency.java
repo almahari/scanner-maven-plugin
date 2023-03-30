@@ -54,11 +54,19 @@ public class ProjectDependency {
     }
 
     public String getVersion() {
-        if (version != null && !version.equals("") && !version.startsWith("$")) {
-            return version;
+
+        if(!projectVersion.equals(""))
+        {
+            return projectVersion;
         }
 
-        return projectVersion;
+        return version;
+
+//        if (version != null && !version.equals("") && !version.startsWith("$")) {
+//            return version;
+//        }
+//
+//        return projectVersion;
     }
 
     public void setVersion(String version) {
@@ -125,5 +133,7 @@ public class ProjectDependency {
         return String.format("%s:%s", groupId, artifactId);
     }
 
-
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
+    }
 }

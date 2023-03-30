@@ -18,6 +18,8 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
+
+
 @Mojo(name = "scan", defaultPhase = LifecyclePhase.COMPILE)
 
 public class DependencyScannerMojo extends BaseMojo {
@@ -25,6 +27,7 @@ public class DependencyScannerMojo extends BaseMojo {
     Set<ProjectDependency> projectDependencies = new HashSet<>();
     Set<String> parsedPom = new HashSet<>();
     Map<String, String> versions = new HashMap<>();
+
     @Parameter(defaultValue = "${project}", required = true, readonly = true)
     MavenProject project;
     @Parameter(required = true)
@@ -34,10 +37,15 @@ public class DependencyScannerMojo extends BaseMojo {
     @Parameter(defaultValue = "true")
     Boolean parseDependencies;
 
+    @Parameter()
+    Set<String> skipDependencies;
+
     public void execute() throws MojoExecutionException {
 
         String projectPomFilePath = project.getFile()
                                            .getAbsolutePath();
+
+        logYellow("Execute dependency:go-offline before scanning for better result");
 
         logV("Local Repository Path: " + localRepository);
         logV("Path of pom.xml: " + projectPomFilePath);
@@ -125,11 +133,20 @@ public class DependencyScannerMojo extends BaseMojo {
                                           .getNodeName())) {
 
                 ProjectDependency dependency = new ProjectDependency(node);
-                dependency.setProjectVersion(getDependencyVersion(dependency));
                 dependency.setType(managementTag.replace("Management", ""));
+                if(dependency.getGroupId().equals("") && dependency.getType().equals("plugin"))
+                    dependency.setGroupId("org.apache.maven.plugins");
+
+                dependency.setProjectVersion(getDependencyVersion(dependency));
                 boolean validFile = parsePomFile(dependency.getDependencies(), Paths.get(localRepository, dependency.getPomPath())
                                                                                     .toString());
                 dependency.setIsValidFile(validFile);
+
+                if (skipDependencies.contains(dependency.getGroupArtifact()) || skipDependencies.contains(dependency.getArtifactId())) {
+                    logV("skip dependency:" + dependency.getGroupArtifact());
+                    continue;
+                }
+
                 dependencies.add(dependency);
 
             }
@@ -143,7 +160,7 @@ public class DependencyScannerMojo extends BaseMojo {
             return versions.get(key);
         }
 
-        return "NA";
+        return "";
     }
 
     private void loadProjectDetails() {
@@ -159,5 +176,4 @@ public class DependencyScannerMojo extends BaseMojo {
                 .stream()
                 .collect(Collectors.toMap(d -> d.getGroupId() + ":" + d.getArtifactId(), Dependency::getVersion)));
     }
-
 }
